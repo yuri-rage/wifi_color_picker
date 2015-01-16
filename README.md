@@ -12,5 +12,7 @@ PWM output is on pins 9, 10, and 11 for R, G, and B, respectively.  I used TIP30
 
 The webpage communicates with the Yun via REST calls.  Set REST to open access on the Yun configuration page.  Behavior should be identical whether then Yun is in access point or client mode.  Because some of the REST calls invoke shell commands as root, this code cannot be considered secure by any means - user beware.
 
+Because REST is used, you can actually set up cron jobs to turn the lights on and off daily, independent of the supplied web UI.  The REST HTTP request to set the LEDs to aqua is `http://arduino.local/arduino/rgb/00ffff`.  Using `curl http://localhost/arduino/rgb/00ffff` from the Yun's command line interface would accomplish the same thing.  Scheduling `curl` requests as cron jobs would be fairly trivial and enable a high degree of automation.
+
 Enjoy!
 
