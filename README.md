@@ -8,5 +8,7 @@ Code documentation is sparse in some places, but you should get a feel for the i
 
 PWM output is on pins 9, 10, and 11 for R, G, and B, respectively.  I used TIP3055 transistors to sink the 12VDC control current to ground.  100ohm resistors between the PWM pins and transistor bases work to saturate (or nearly saturate) the transistors without overloading the Atmega chip.  Power is supplied via a cigarette lighter-style power port and USB-micro cell phone charger.
 
+The webpage communicates with the Yun via REST calls.  Set REST to open access on the Yun configuration page.  Behavior should be identical whether then Yun is in access point or client mode.  Because some of the REST calls invoke shell commands as root, this code cannot be considered secure by any means - user beware.
+
 Enjoy!
 
