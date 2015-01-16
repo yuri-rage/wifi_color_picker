@@ -1,0 +1,231 @@
+<html>
+<head>
+
+<!--
+  LED color picker intended for wifi use with an Arduino Yun
+  used to control my RV porch lights
+
+  yuri - Jan 2015
+-->
+
+
+  <meta http-equiv="content-type" content="text/html; charset=utf-8">
+  <!-- use the first viewport meta to set default zoom + allow zoom on mobile devices
+       use the second to do the same and disable zoom (less flexible, looks better)-->
+  <!-- meta name="viewport" content="width=device-width, initial-scale=1" -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+  <title>Cyclone LED Control</title>
+
+  <link rel="stylesheet" type="text/css" href="css/wifi_color_picker.css">
+  <link rel="stylesheet" media="all" type="text/css" href="css/Intimidatetime.min.css">
+  <link rel="apple-touch-icon" href="apple-touch-icon.png">
+  <link rel="icon" type="image/png" href="icon.png">
+
+  <script type="text/javascript" src="scripts/zepto.min.js"></script>
+  <script type="text/javascript" src="scripts/jscolor.js"></script>
+  <script type="text/javascript" src="scripts/Intimidatetime.min.js"></script>
+
+<script>
+
+// send the command to have the microcontroller set its clock to client system time
+// necessary due to no RTC/battery contained in the microcontroller/embedded system
+function clockMsg() {
+ var d = new Date();
+ var n = d.getTime() / 1000;
+ $.get('/arduino/clock/' + n + '/');
+ return false;
+}
+
+// send the atq command to see microprocessor scheduled events
+function echoAtq() {
+    $.get('/arduino/echo/atq', function(response){
+      $('#statusText').html(response);
+    });
+}
+
+// send the atrm command to remove microprocessor scheduled events
+function echoAtrm() {
+    $.get('/arduino/echo/atrm', function(response){
+      $('#statusText').html(response);
+    });
+}
+
+
+function init() {
+  // initialize the color picker
+  // I'm sure there's a way to reference the .color methods using jquery (zepto),
+  //    but I cannot make it happen!
+  document.getElementById('colorPicker').color.showPicker();
+
+  // initialize the date (time) picker
+  // format is able to be directly parsed by the Date() constructor
+  $('#intimidatetimePicker').intimidatetime({
+    format: 'dd MMM yyyy HH:mm:ss zz',
+    previewFormat: 'd MMM yyyy HH:mm'
+  });
+
+  $.get('/arduino/echo/echo', function(response){
+    
+    //$('#statusText').html(response);  // will display raw response
+    
+    // look for a somewhat unique response from the LED microcontroller
+    // it should be in the format "Arduino Yun - timestamp:<Unix time> - ledstate: #<color>"
+    if (response.indexOf("Arduino Yun") != -1) {
+      var idText = "LED Controller found at " + location.host + "<br>";
+      var d = new Date();
+      var sysTime = d.getTime() / 1000;
+      var ledTime = parseInt(response.substring(response.indexOf(":") + 1));
+      var myColor = response.substring(response.indexOf("#") + 1);
+      
+      // set the color picker element to the current led state
+      document.getElementById('colorPicker').color.fromString(myColor);
+      
+      // if microprocessor/embedded system clock is off by more than 2 minutes (120 seconds), set it
+      // then display a nerdy message about what happened here (mostly for debugging, but it hurts nothing)
+      if (Math.abs(sysTime - ledTime) > 120) {
+        clockMsg();
+        idText += "Controller system clock was resynced with client system time.";
+      } else {
+        idText += "Controller system clock is synced with client system time.";
+      }
+
+      $('#statusText').html(idText);
+    } else {
+       // no valid response, display an error message
+       // likely reason is that the microcontroller has the wrong sketch loaded, since this page is served
+       //   by the embedded system physically connected to the microcontroller
+       $('#statusText').html("ERROR: Controller did not respond.<br>Refresh the page to try again.");
+    }
+
+  });
+
+}
+
+// send the command to have the microprocessor set the selected LED color
+// if the date picker input is populated, send the command to schedule a color change
+function setLEDColor(myColor) {
+
+  // no date value - send the rgb command
+  if ($('#intimidatetimePicker').val() != '') {
+    var d = new Date();
+    var myNow = d.getTime() / 1000;
+    var myDate = new Date($('#intimidatetimePicker').val());
+    var atTime = myDate / 1000;
+
+    if (atTime < myNow) {
+      $('#statusText').html("ERROR: Cannot schedule in the past.");
+    } else {
+      $.get('/arduino/rgbat/' + myColor + "/" + atTime, function(response){
+        $('#statusText').html(response);
+      });
+    }
+    
+  } else {
+    // date value exists - send the rgbat command to schedule the change
+    $.get('/arduino/rgb/' + myColor, function(response){
+      $('#statusText').html(response);
+    });
+  }
+}
+
+// fires upon selection of a new color
+function colorpickerChange() {
+  setLEDColor(document.getElementById('colorPicker').color.toString());
+}
+
+// determine which HTML element fired the event
+// from http://stackoverflow.com/questions/772882/js-is-there-a-way-to-tell-what-object-called-a-function
+function getTargetElement(evt) {
+  evt = (evt) ? evt : ((window.event) ? window.event : "");
+  var elem;
+  if (evt.target) {
+      elem = (evt.target.nodeType == 3) ? evt.target.parentNode : evt.target;
+  } else {
+      elem = evt.srcElement;
+  }
+  return elem;
+}
+
+// convert an rgb value to a hex (web) color string
+// http://wowmotty.blogspot.com/2009/06/convert-jquery-rgb-output-to-hex-color.html
+function rgb2hex(rgb){
+ rgb = rgb.match(/^rgb\((\d+),\s*(\d+),\s*(\d+)\)$/);
+ return "#" +
+  ("0" + parseInt(rgb[1],10).toString(16)).slice(-2) +
+  ("0" + parseInt(rgb[2],10).toString(16)).slice(-2) +
+  ("0" + parseInt(rgb[3],10).toString(16)).slice(-2);
+}
+
+// fires when discrete color buttons are clicked
+// set the color picker to the selected color
+// then call the function to handle microprocessor commands
+function discreteColor(evt) {
+  var clickedObj = getTargetElement(evt);
+  var myColor = rgb2hex(clickedObj.style.backgroundColor);
+  myColor = myColor.replace("#", "");
+  document.getElementById('colorPicker').color.fromString(myColor);
+  setLEDColor(myColor);
+}
+
+// clear (reset) the date picker input
+function clearDateTime() {
+  $('#intimidatetimePicker').val('');
+}
+
+</script>
+
+
+</head>
+
+<body onload="init();">
+
+<div id="colorPickerDiv">
+<input class="color {pickerOnfocus:false,pickerPosition:'top'}" id="colorPicker" onchange="colorpickerChange();">
+</div>
+
+<div id="buttongrid">
+<input type="button" class="colorbutton" style="background-color:#ff0000;" onclick="discreteColor(event);">
+<input type="button" class="colorbutton" style="background-color:#00ff00;" onclick="discreteColor(event);">
+<input type="button" class="colorbutton" style="background-color:#0000ff;" onclick="discreteColor(event);">
+
+<input type="button" class="colorbutton" style="background-color:#ff3300;" onclick="discreteColor(event);">
+<input type="button" class="colorbutton" style="background-color:#33ff99;" onclick="discreteColor(event);">
+<input type="button" class="colorbutton" style="background-color:#003399;" onclick="discreteColor(event);">
+
+<input type="button" class="colorbutton" style="background-color:#ff9900;" onclick="discreteColor(event);">
+<input type="button" class="colorbutton" style="background-color:#00ffff;" onclick="discreteColor(event);">
+<input type="button" class="colorbutton" style="background-color:#663366;" onclick="discreteColor(event);">
+
+<input type="button" class="colorbutton" style="background-color:#ffcc00;" onclick="discreteColor(event);">
+<input type="button" class="colorbutton" style="background-color:#0099ff;" onclick="discreteColor(event);">
+<input type="button" class="colorbutton" style="background-color:#cc0099;" onclick="discreteColor(event);">
+
+<input type="button" class="colorbutton" style="background-color:#ffff00;" onclick="discreteColor(event);">
+<input type="button" class="colorbutton" style="background-color:#0066ff;" onclick="discreteColor(event);">
+<input type="button" class="colorbutton" style="background-color:#ff00ff;" onclick="discreteColor(event);">
+
+<input type="button" class="whitebutton" style="background-color:#ffffff;" value="White"  onclick="discreteColor(event);">
+<input type="button" class="offbutton" style="background-color:#000000;" value="Off" onclick="discreteColor(event);">
+</div>
+
+<div id="intimidatetimePickerDiv">
+<input type="text" id="intimidatetimePicker" value="" class="inputFull"/>
+<input type="button" id="resetButton" onclick="clearDateTime();" value="Reset Date">
+</div>
+
+<div id="scheduleDiv">
+<input type="button" onclick="echoAtq();" value="Show Schedule" style="width:120px;">
+<input type="button" onclick="echoAtrm();" value="Clear Schedule" style="width:120px;">
+</div>
+
+<!-- uncomment to enable "manual" clock sync
+<div><input type="button" onclick="clockMsg();" value="SYNC TIME"></div>
+-->
+
+<div id="statusText">
+Please wait, detecting LED controller...
+</div>
+
+</body>
+</html>

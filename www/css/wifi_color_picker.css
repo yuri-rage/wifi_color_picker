@@ -1,0 +1,81 @@
+/*
+ * color_picker.css
+ *
+ * basic page layout for the wifi LED controller
+ *
+ * yuri - Jan 2015
+ * */
+
+#colorPickerDiv {
+  width:250px;
+  height:175px;
+  float:left;
+  margin-right:3px;
+  text-align:center;
+}
+
+#colorPicker {
+  width:237px;
+  margin-top:125px;
+}
+
+#buttongrid {
+  width:130px;
+  height:175px;
+  float:left;
+  text-align:center;
+  border:1px solid;
+  border-radius:12px;
+  border-color:gray;
+  box-shadow:3px 3px 3px lightgray;
+}
+
+#intimidatetimePickerDiv {
+  width:377px;
+  padding:10px 5px 3px 3px;
+  clear:both;
+}
+
+#intimidatetimePicker {
+  width:237px;
+  margin:3px;
+}
+
+#resetButton {
+  width:110px;
+  margin:3px 10px;
+}
+
+#scheduleDiv {
+  width:377px;
+  padding:5px 3px;
+  clear:both;
+  text-align:center;
+}
+
+#statusText{
+  width:377px;
+  padding:5px 3px;
+}
+
+.colorbutton {
+width:32;
+background-color:#ffffff;
+border-radius:12px;
+margin:3px 3px;
+}
+
+.whitebutton {
+  width:50;
+  color:black;
+  border-radius:12px;
+  margin:5px 3px;
+}
+
+.offbutton {
+  width:50;
+  color:white;
+  border-radius:12px;
+  margin:5px 3px;
+}
+
